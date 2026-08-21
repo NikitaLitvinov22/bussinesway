@@ -1,0 +1,118 @@
+<!--
+  Командный пункт Ydent — сниппет отслеживания источника трафика для сайта.
+
+  КУДА ВСТАВИТЬ (в Tilda):
+    Настройки сайта → Ещё → Вставка кода на сайт → поле "Код в head (для всех
+    страниц)" — вставить этот код целиком, сохранить и опубликовать сайт.
+
+  ЧТО ОН ДЕЛАЕТ:
+    1. При заходе по рекламной ссылке (есть utm_source / gclid / yclid в адресе)
+       запоминает источник в cookie на 90 дней. Если меток в адресе нет —
+       ничего не трогает, чтобы не затереть то, что уже сохранено с прошлого
+       захода (человек мог кликнуть по рекламе неделю назад, а записаться
+       сегодня, просто зайдя на сайт напрямую).
+    2. Один раз генерирует свой cookie visitor_id — постоянный идентификатор
+       посетителя, живёт год, не перезаписывается.
+    3. Перед отправкой ЛЮБОЙ формы на странице ищет в ней скрытые поля с
+       именами utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+       visitor_id — и подставляет туда сохранённые значения. Если в форме
+       таких полей нет — просто ничего не делает, на саму отправку формы
+       это не влияет.
+
+  ВАЖНО: чтобы это заработало, в самой форме (в конструкторе Tilda) должны
+  быть добавлены скрытые поля с ИМЕННО такими именами (Name / ID поля):
+      utm_source, utm_medium, utm_campaign, utm_term, utm_content, visitor_id
+  Если Tilda не даёт свободно задать имя скрытого поля — пришлите скриншот
+  настроек поля, поправим селектор под то, что реально получается.
+-->
+<script>
+(function () {
+  "use strict";
+
+  var COOKIE_NAME = "ydent_utm";
+  var VISITOR_COOKIE = "ydent_visitor";
+  var UTM_COOKIE_DAYS = 90;
+  var VISITOR_COOKIE_DAYS = 365;
+
+  function setCookie(name, value, days) {
+    var expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+    document.cookie = name + "=" + encodeURIComponent(value) + "; expires=" + expires + "; path=/; SameSite=Lax";
+  }
+
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      var v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  // --- 1. Постоянный ID посетителя — если его ещё нет, создаём один раз. ---
+  if (!getCookie(VISITOR_COOKIE)) {
+    setCookie(VISITOR_COOKIE, uuid(), VISITOR_COOKIE_DAYS);
+  }
+
+  // --- 2. utm-метки — обновляем ТОЛЬКО если они реально есть в адресе сейчас
+  // (то есть человек только что пришёл по рекламной ссылке). Если их нет —
+  // не трогаем то, что уже сохранено с прошлого визита. ---
+  var params = new URLSearchParams(window.location.search);
+  var utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+  var hasUtm = utmKeys.some(function (k) { return params.has(k); }) || params.has("gclid") || params.has("yclid");
+
+  if (hasUtm) {
+    var data = {};
+    utmKeys.forEach(function (k) {
+      if (params.has(k)) data[k] = params.get(k);
+    });
+    // Клик по Яндекс.Директ / Google Ads не всегда несёт utm-метки, но всегда
+    // несёт свой click id — по нему тоже можно понять источник и канал.
+    if (params.has("yclid") && !data.utm_source) { data.utm_source = "yandex"; data.utm_medium = "cpc"; }
+    if (params.has("gclid") && !data.utm_source) { data.utm_source = "google"; data.utm_medium = "cpc"; }
+    setCookie(COOKIE_NAME, JSON.stringify(data), UTM_COOKIE_DAYS);
+  }
+
+  // --- 3. Перед отправкой формы подставляем сохранённые значения в скрытые
+  // поля с соответствующими именами (если они есть в форме). ---
+  function fillHiddenFields(form) {
+    var utm = {};
+    try {
+      utm = JSON.parse(getCookie(COOKIE_NAME) || "{}");
+    } catch (e) {
+      utm = {};
+    }
+    var values = {
+      utm_source: utm.utm_source || "",
+      utm_medium: utm.utm_medium || "",
+      utm_campaign: utm.utm_campaign || "",
+      utm_term: utm.utm_term || "",
+      utm_content: utm.utm_content || "",
+      visitor_id: getCookie(VISITOR_COOKIE) || "",
+    };
+    Object.keys(values).forEach(function (key) {
+      var field = form.querySelector('[name="' + key + '"]');
+      if (field) field.value = values[key];
+    });
+  }
+
+  // Обычная отправка формы (submit).
+  document.addEventListener("submit", function (e) {
+    if (e.target && e.target.tagName === "FORM") fillHiddenFields(e.target);
+  }, true);
+
+  // Подстраховка на случай форм Tilda, которые отправляются через AJAX по
+  // клику на кнопку без обычного события submit.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest('button, input[type="submit"], .t-submit');
+    if (btn) {
+      var form = btn.closest("form");
+      if (form) fillHiddenFields(form);
+    }
+  }, true);
+})();
+</script>
