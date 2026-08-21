@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Template for production deployment script
+# 
+# IMPORTANT: Before using this script:
+# 1. Create server.env based on server.env.example
+# 2. Never commit server.env to version control
+# 3. Use GitHub Secrets or secure vaults for production credentials
+# 4. Ensure you have network access to the production server
+#
+# Usage: bash deploy_now.sh
+
+set -euo pipefail
+cd "$(dirname "$0")"
+
+# Load environment variables from local server.env (not in git)
+if [ ! -f server.env ]; then
+    echo "Error: server.env not found. Create it based on server.env.example"
+    exit 1
+fi
+
+set -a; source server.env; set +a
+
+# Security: Verify critical variables are set
+if [ -z "${DOMAIN:-}" ] || [ -z "${SERVER_IP:-}" ] || [ -z "${DEPLOY_TOKEN:-}" ]; then
+    echo "Error: Missing required environment variables (DOMAIN, SERVER_IP, DEPLOY_TOKEN)"
+    exit 1
+fi
+
+# Check if app_update.tar.gz exists
+if [ ! -f app_update.tar.gz ]; then
+    echo "Error: app_update.tar.gz not found"
+    exit 1
+fi
+
+echo "Deploying to ${DOMAIN} (${SERVER_IP})..."
+
+# Use --resolve to bypass local DNS and connect directly by IP
+# This ensures TLS certificate verification works correctly
+curl -sS --resolve "${DOMAIN}:443:${SERVER_IP}" -X POST "https://${DOMAIN}/internal/deploy" \
+  -H "X-Deploy-Token: ${DEPLOY_TOKEN}" \
+  --data-binary @app_update.tar.gz
+
+echo
+echo "Deployment submitted. Checking health..."
+curl -sS --resolve "${DOMAIN}:443:${SERVER_IP}" "https://${DOMAIN}/internal/health"
+echo
