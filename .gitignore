@@ -5,6 +5,7 @@
 server.env
 *.key
 *.pem
+.env.production
 
 # Build artifacts
 *.tar.gz
@@ -41,3 +42,40 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Coverage
+coverage/
+.coverage
+htmlcov/
+
+# Debugging
+.debug
+*.pdb
+*.pyc
+
+# Credentials and certificates (SECURITY CRITICAL)
+credentials.json
+*.pfx
+*.p12
+*.jks
+keystore
+
+# Docker secrets
+.dockersecrets
+secrets/
+
+# Cloud credentials
+.aws
+.gcp
+google-cloud-key.json
+.azure
+
+# API keys and tokens (should never be in repo)
+.apikeys
+*.token
+*.jwt
