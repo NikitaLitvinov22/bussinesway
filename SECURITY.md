@@ -1,159 +1,155 @@
-# 🔒 Security Policy
+# 🔒 SECURITY.md - BusinessWay Security Guidelines
 
-## Reporting Security Vulnerabilities
+## 🚨 Reporting Security Issues
 
-If you discover a security vulnerability in BusinessWay, please **DO NOT** create a public GitHub issue.
+**DO NOT** open public GitHub issues for security vulnerabilities.
 
-Instead, please email: `security@businessway.local` with:
-- Description of the vulnerability
+Email: `security@businessway.local` with:
+- Vulnerability description
 - Steps to reproduce
 - Potential impact
-- Your recommended fix (if any)
+- Suggested fix (optional)
 
-We will acknowledge receipt within 48 hours and work on a fix promptly.
+Response time: 48 hours max
 
 ---
 
 ## 🏥 Healthcare Data Protection
 
-This project handles sensitive healthcare data (HIPAA, GDPR, Russian Federal Law 152-FZ compliance required).
+This project handles **HIPAA-sensitive healthcare data**.
 
 ### Security Requirements
 
-#### 1. **Data in Transit**
-- ✅ TLS 1.3+ for all communications
-- ✅ Certificate pinning for critical endpoints
-- ✅ HSTS headers required
-- ✅ No unencrypted HTTP allowed
+#### 1. Data in Transit
+- ✅ TLS 1.3+ mandatory
+- ✅ Certificate pinning for APIs
+- ✅ HSTS headers enforced
+- ✅ No unencrypted HTTP
 
-#### 2. **Data at Rest**
+#### 2. Data at Rest
 - ✅ AES-256-GCM encryption for PII/PHI
-- ✅ Separate encryption keys per patient
+- ✅ Per-patient encryption keys
 - ✅ Encrypted database backups
 - ✅ Key rotation every 90 days
 
-#### 3. **Access Control**
-- ✅ Role-based access control (RBAC)
-- ✅ Multi-factor authentication (MFA) for admins
+#### 3. Access Control
+- ✅ Role-Based Access Control (RBAC)
+- ✅ Multi-Factor Authentication for admins
 - ✅ Audit logging for all data access
-- ✅ Data access logs retained for 3+ years
+- ✅ 3+ year retention for access logs
 
-#### 4. **API Security**
+#### 4. API Security
 - ✅ Rate limiting per endpoint
-- ✅ Input validation and sanitization
-- ✅ SQL injection prevention (parameterized queries)
+- ✅ Input validation & sanitization
+- ✅ Parameterized queries (SQL injection prevention)
 - ✅ CORS properly configured
 
-#### 5. **Secrets Management**
-- ✅ **Never** commit `.env` files
+#### 5. Secrets Management
+- ✅ **NEVER** commit `.env` files
 - ✅ Use GitHub Secrets for CI/CD
-- ✅ Use external vaults (HashiCorp Vault, AWS Secrets Manager) in production
+- ✅ Use external vaults in production (HashiCorp Vault, AWS Secrets Manager)
 - ✅ Rotate API keys every 30 days
 - ✅ Implement secret versioning
 
-#### 6. **Logging & Monitoring**
+#### 6. Logging & Monitoring
 - ✅ All authentication attempts logged
-- ✅ Failed login attempts trigger alerts
-- ✅ Data access logs immutable
-- ✅ Real-time alerting for suspicious activity
+- ✅ Failed logins trigger alerts
+- ✅ Immutable data access logs
+- ✅ Real-time anomaly detection
 
 ---
 
-## 🛡️ Development Best Practices
+## 🛡️ Development Checklist
 
-### Before Committing
+### Before Every Commit
 ```bash
-# 1. Scan for secrets
+# 1. Scan staged changes for secrets
 git diff --cached | grep -i "password\|api_key\|secret\|token"
 
-# 2. Verify .env files are not staged
+# 2. Verify .env files excluded
 git status | grep ".env"
 
-# 3. Run security checks locally
-npm run security:check  # or your language equivalent
+# 3. Run pre-commit hooks (if installed)
+pre-commit run --all-files
 ```
 
-### Environment Setup
+### Local Environment Setup
 ```bash
-# 1. Copy example template
+# Copy template
 cp server.env.example server.env
 
-# 2. Fill in YOUR values (never commit this file)
-# 3. Add to .gitignore (already done)
+# Edit with your values (NEVER commit this)
+# Ensure it's in .gitignore (already done)
 ```
 
 ### Webhook Security
-- ✅ Always use `Authorization: Bearer <token>` headers
+- ✅ Use `Authorization: Bearer <token>` headers (not URL params)
 - ✅ Validate webhook signatures (HMAC-SHA256)
 - ✅ Reject unsigned webhooks
-- ✅ Implement webhook IP whitelisting when possible
+- ✅ IP whitelist when possible
 
 ---
 
 ## 🔐 GitHub Secrets Setup
 
-Required secrets for CI/CD pipelines:
+Required for CI/CD pipelines:
 
-```
-DEPLOY_TOKEN              # For deployment endpoint
-DB_PASSWORD               # Database password
-DATA_ENCRYPTION_KEY       # Patient data encryption key
-CRM_AUTH_TOKEN           # CRM integration token
-CALLTOUCH_AUTH_TOKEN     # Calltouch integration token
-GITGUARDIAN_API_KEY      # For security scanning
-```
+| Secret | Purpose |
+|--------|---------|
+| `DEPLOY_TOKEN` | Production deployment authorization |
+| `DB_PASSWORD` | Database connection |
+| `CRM_AUTH_TOKEN` | CRM integration |
+| `CALLTOUCH_AUTH_TOKEN` | Calltouch integration |
+| `DATA_ENCRYPTION_KEY` | Patient data encryption |
 
-**To set up secrets:**
-1. Go to: Settings → Secrets and variables → Actions
-2. Click "New repository secret"
-3. Add each variable above
+**Setup:** Settings → Secrets and variables → Actions → New repository secret
 
 ---
 
 ## 📋 Compliance Checklist
 
-- [ ] HIPAA compliance audit completed
+- [ ] HIPAA compliance audit scheduled
 - [ ] GDPR Data Processing Agreement signed
 - [ ] Russian data localization verified
-- [ ] Encryption keys rotated
-- [ ] Security patch updates applied
+- [ ] Encryption keys generated and stored safely
+- [ ] Security patches applied
 - [ ] Penetration testing scheduled
 - [ ] Incident response plan documented
-- [ ] Security training completed by team
+- [ ] Team security training completed
 
 ---
 
-## 🚨 Incident Response
+## 🚨 Incident Response Protocol
 
-If a security incident occurs:
+If a breach occurs:
 
-1. **Immediate Actions:**
+1. **Immediate (0-1 hour)**
    - Revoke compromised credentials
-   - Take affected systems offline if necessary
-   - Preserve evidence and logs
+   - Take affected systems offline if needed
+   - Preserve logs and evidence
 
-2. **Investigation:**
-   - Determine scope of breach
-   - Identify affected data/users
+2. **Investigation (1-24 hours)**
+   - Determine breach scope
+   - Identify affected data/patients
    - Root cause analysis
 
-3. **Notification:**
-   - Notify affected parties within 72 hours (GDPR requirement)
-   - File incident report
-   - Notify healthcare authorities if required
+3. **Notification (within 72 hours)**
+   - Notify affected individuals (GDPR required)
+   - File incident reports
+   - Notify health authorities if required
 
-4. **Recovery:**
-   - Deploy patches
+4. **Recovery (24+ hours)**
+   - Deploy security patches
    - Restore from clean backups
    - Verify system integrity
-   - Update incident documentation
+   - Document lessons learned
 
 ---
 
-## 📚 Additional Resources
+## 📚 References
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [HIPAA Security Rule](https://www.hhs.gov/hipaa/for-professionals/security/index.html)
+- [HIPAA Security Rule](https://www.hhs.gov/hipaa/)
 - [GDPR Compliance](https://gdpr-info.eu/)
 - [Russian Federal Law 152-FZ](https://digital.gov.ru/en/legislation/laws/)
 
